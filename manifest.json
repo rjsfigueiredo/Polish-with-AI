@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Polish with Gemini free",
+  "version": "1.0",
+  "description": "Improve your text style, grammar, and clarity using Google Gemini.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "contextMenus",
+    "tabs",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}
