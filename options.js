@@ -7,7 +7,7 @@ const DEFAULT_PROMPTS = [
 ];
 
 function generateId() {
-  return 'prompt_' + Math.random().toString(36).substr(2, 9);
+  return 'prompttemplate_' + Math.random().toString(36).substr(2, 9);
 }
 
 function renderPromptCard(prompt) {
@@ -75,7 +75,14 @@ function renderPromptCard(prompt) {
 }
 
 function restoreOptions() {
-  chrome.storage.sync.get({ promptsBacklog: null, customPrompt: null }, (items) => {
+  chrome.storage.sync.get({ 
+    promptsBacklog: null, 
+    customPrompt: null,
+    aiGemini: true,
+    aiChatgpt: true,
+    aiPerplexity: true,
+    aiClaude: true
+  }, (items) => {
     let prompts = items.promptsBacklog;
     
     // Migration: If user had the old customPrompt but no backlog
@@ -95,6 +102,11 @@ function restoreOptions() {
     prompts.forEach(prompt => {
       listContainer.appendChild(renderPromptCard(prompt));
     });
+
+    document.getElementById('ai-gemini').checked = items.aiGemini;
+    document.getElementById('ai-chatgpt').checked = items.aiChatgpt;
+    document.getElementById('ai-perplexity').checked = items.aiPerplexity;
+    document.getElementById('ai-claude').checked = items.aiClaude;
   });
 }
 
@@ -114,7 +126,18 @@ function saveOptions() {
     }
   });
 
-  chrome.storage.sync.set({ promptsBacklog }, () => {
+  const aiGemini = document.getElementById('ai-gemini').checked;
+  const aiChatgpt = document.getElementById('ai-chatgpt').checked;
+  const aiPerplexity = document.getElementById('ai-perplexity').checked;
+  const aiClaude = document.getElementById('ai-claude').checked;
+
+  chrome.storage.sync.set({ 
+    promptsBacklog,
+    aiGemini,
+    aiChatgpt,
+    aiPerplexity,
+    aiClaude
+  }, () => {
     const status = document.getElementById('status');
     status.style.opacity = '1';
     setTimeout(() => {
