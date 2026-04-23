@@ -1,8 +1,8 @@
 const DEFAULT_PROMPTS = [
   {
     id: "default_polish",
-    label: "Polish with Gemini",
-    template: "Please polish the following text for clarity and grammar: {{selected_text}}"
+    label: "Polish Text",
+    template: "Polish the following text for clarity and grammar: {{selected_text}}\n\nContext page url: {{web_page_context}}"
   }
 ];
 
