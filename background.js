@@ -1,45 +1,95 @@
-// Create the context menu item when the extension is installed
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "polish-with-gemini",
-    title: "✨ Polish with Gemini",
-    contexts: ["selection", "editable"]
+const DEFAULT_PROMPT = "Please polish the following text for clarity and grammar: {{text}}";
+
+const AI_CONFIGS = {
+  gemini: {
+    id: "send-to-gemini",
+    title: "Send to Gemini",
+    url: "https://gemini.google.com/app?q=",
+    storageKey: "aiGemini"
+  },
+  chatgpt: {
+    id: "send-to-chatgpt",
+    title: "Send to ChatGPT",
+    url: "https://chatgpt.com/?q=",
+    storageKey: "aiChatgpt"
+  },
+  perplexity: {
+    id: "send-to-perplexity",
+    title: "Send to Perplexity",
+    url: "https://www.perplexity.ai/?q=",
+    storageKey: "aiPerplexity"
+  },
+  claude: {
+    id: "send-to-claude",
+    title: "Send to Claude",
+    url: "https://claude.ai/new?q=",
+    storageKey: "aiClaude"
+  }
+};
+
+function setupContextMenus() {
+  chrome.storage.sync.get({
+    aiGemini: true,
+    aiChatgpt: true,
+    aiPerplexity: true,
+    aiClaude: true
+  }, (items) => {
+    chrome.contextMenus.removeAll(() => {
+      chrome.contextMenus.create({
+        id: "polish-with-ai-parent",
+        title: "✨ Polish with AI",
+        contexts: ["selection", "editable"]
+      });
+
+      Object.values(AI_CONFIGS).forEach(config => {
+        if (items[config.storageKey]) {
+          chrome.contextMenus.create({
+            id: config.id,
+            parentId: "polish-with-ai-parent",
+            title: config.title,
+            contexts: ["selection", "editable"]
+          });
+        }
+      });
+    });
   });
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  setupContextMenus();
 });
 
-// Default prompt fallback
-const DEFAULT_PROMPT = "Please polish the following text for clarity and grammar: {{text}}";
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync') {
+    setupContextMenus();
+  }
+});
 
 // Listen for clicks on the context menu item
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "polish-with-gemini") {
-    // Capture the selected text
-    const selectedText = info.selectionText;
+  const aiConfig = Object.values(AI_CONFIGS).find(c => c.id === info.menuItemId);
+  if (!aiConfig) return;
 
-    // Ensure we have some text to work with
-    if (!selectedText || !selectedText.trim()) {
-      console.warn("No text selected.");
-      return;
+  const selectedText = info.selectionText;
+
+  if (!selectedText || !selectedText.trim()) {
+    console.warn("No text selected.");
+    return;
+  }
+
+  chrome.storage.sync.get({ customPrompt: DEFAULT_PROMPT }, (items) => {
+    const template = items.customPrompt;
+    let fullPrompt = "";
+
+    if (template.includes("{{text}}")) {
+      fullPrompt = template.replace("{{text}}", selectedText);
+    } else {
+      fullPrompt = template + "\n\n" + selectedText;
     }
 
-    // Fetch the custom template from storage
-    chrome.storage.sync.get({ customPrompt: DEFAULT_PROMPT }, (items) => {
-      const template = items.customPrompt;
-      let fullPrompt = "";
-
-      // Replace placeholder or append
-      if (template.includes("{{text}}")) {
-        fullPrompt = template.replace("{{text}}", selectedText);
-      } else {
-        // If no placeholder is found, append to the end
-        fullPrompt = template + "\n\n" + selectedText;
-      }
-
-      // Store the prompt in chrome.storage.local
-      chrome.storage.local.set({ pendingPrompt: fullPrompt }, () => {
-        // Open a new tab with Gemini
-        chrome.tabs.create({ url: "https://gemini.google.com/app" });
-      });
+    chrome.storage.local.set({ pendingPrompt: fullPrompt }, () => {
+      const targetUrl = aiConfig.url + encodeURIComponent(fullPrompt);
+      chrome.tabs.create({ url: targetUrl });
     });
-  }
+  });
 });
